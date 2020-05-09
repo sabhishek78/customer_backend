@@ -1,6 +1,7 @@
 const MongoClient = require('mongodb').MongoClient;
 const assert = require('assert');
 const url="mongodb+srv://sabhishek78:OsmN@1978@cluster0-gkfgf.gcp.mongodb.net/test?retryWrites=true&w=majority";
+
 const dbName = 'customer-application';
 let mongoConnection=null;
 const bcrypt = require('bcrypt');
@@ -62,7 +63,12 @@ app.get('/',(request,response)=>{
  response.send('Hey There')
 });
 app.get('/customers',async(request,response)=>{
-    let data=await mongoConnection.db('customer-application').collection('customers').find({status:"active"}).toArray();
+    console.log(request.session.userID);
+    if(!request.session.userID){
+        response.status(403).send();
+        return;
+    }
+    let data=await mongoConnection.db('customer-application').collection('customers').find({status:"active",owner:request.session.userID}).toArray();
     console.log("the data is ="+JSON.stringify(data));
     response.send(data);
 })
@@ -85,7 +91,8 @@ app.post('/customers/add',async(request,response)=>{
         customerName:request.body.customerName,
         gender:request.body.gender,
         phoneNumber:request.body.phoneNumber,
-        status:"active"
+        status:"active",
+        owner:request.session.userID,
     }
     // customers.push(temp);
     let result=await mongoConnection.db('customer-application').collection('customers').insertOne(temp);
@@ -107,7 +114,7 @@ app.post('/users/signUp',async(request,response)=>{
     if(findUser===null){
         let result=await mongoConnection.db('customer-application').collection('users').insertOne(temp);
         console.log("result is ="+result.insertedId);
-        request.session.userID=result.insertedId;
+        // request.session.userID=result.insertedId; //cookie not needed for signup
         response.send(result.insertedId);
     }
     else{
@@ -128,7 +135,9 @@ app.post('/users/login',async(request,response)=>{
         console.log("user exists checking for password");
         var result=await bcrypt.compare(request.body.password,user.password);
         if(result){
+            request.session.userID=user._id;
             response.send({status:"passwordsMatch"});
+
         }
         else{
             response.send({status:"passwordsDoNotMatch"});
