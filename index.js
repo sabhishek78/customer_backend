@@ -145,6 +145,12 @@ app.post('/users/login',async(request,response)=>{
     }
 
 });
+app.post('/logout', async function (req, res) {
+    console.log("logging out user : " + req.session.userId);
+    console.log(req.body);
+    req.session = null;
+    res.send({status: "userLoggedOut",})
+})
 app.get('/customers/:customerID',(request,response)=>{
    for(let i=0;i<customers.length;i++){
        if(customers[i].customerID==request.params.customerID){
